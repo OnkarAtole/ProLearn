@@ -120,21 +120,16 @@
         <button id="addTaskBtn">Add Task</button>
         <div id="taskList"></div>
     </div>
-
+    <script>
+        const firebaseConfig = CONFIG.firebaseConfig2;
+        
+    </script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-firestore.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyANJBqPG_1R1P4Fv4pbnXmb8EBfzGZkKQA",
-            authDomain: "prolearn-5c636.firebaseapp.com",
-            projectId: "prolearn-5c636",
-            storageBucket: "prolearn-5c636.appspot.com",
-            messagingSenderId: "1043082930136",
-            appId: "1:1043082930136:web:9dd49f4baa9ab3625e34ad"
-        };
-
+        
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
