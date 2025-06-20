@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            width: 350px;
+            text-align: center;
+        }
+        h2 {
+            color: #fff;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        input:focus {
+            border-color: #76c7a0;
+            transform: scale(1.02);
+        }
+        button {
+            background: linear-gradient(135deg, #76c7a0, #90ee90);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s, transform 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #90ee90, #76c7a0);
+            transform: scale(1.05);
+        }
+        p {
+            color: #fff;
+            margin-top: 10px;
+        }
+        a {
+            color: #76c7a0;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        label {
+            display: block;
+            text-align: left;
+            color: #fff;
+            font-size: 14px;
+            margin: 8px 0 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <label for="email">Email:</label>
+        <input type="email" id="email" placeholder="Enter Email" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" placeholder="Enter Password" required>
+        <button id="loginBtn">Login</button>
+        <p>Don't have an account? <a href="/register">Register</a></p>
+    </div>
+    <script type="module">
+        // ✅ Import Firebase Modules (For Firebase 9.2.0)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-auth.js";
+
+        // ✅ Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyANJBqPG_1R1P4Fv4pbnXmb8EBfzGZkKQA",
+            authDomain: "prolearn-5c636.firebaseapp.com",
+            projectId: "prolearn-5c636",
+            storageBucket: "prolearn-5c636.appspot.com",
+            messagingSenderId: "1043082930136",
+            appId: "1:1043082930136:web:9dd49f4baa9ab3625e34ad"
+        };
+
+        // ✅ Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // ✅ Login Function
+        document.getElementById("loginBtn").addEventListener("click", function() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    console.log("✅ Login Successful:", userCredential.user);
+                    alert("✅ Login successful! Redirecting...");
+
+                    // ✅ Store Token & Redirect
+                    userCredential.user.getIdToken().then((token) => {
+                        localStorage.setItem("firebaseToken", token);
+                        localStorage.setItem("userUID", userCredential.user.uid);
+                        window.location.href = "/home";
+                    });
+                })
+                .catch((error) => {
+                    console.error("❌ Login failed:", error.message);
+                    alert("❌ Login failed: " + error.message);
+                });
+        });
+    </script>
+</body>
+</html>

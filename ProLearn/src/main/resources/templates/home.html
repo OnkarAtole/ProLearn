@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #333;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #202225;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .sidebar h2 {
+            color: #ffffff;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .sidebar button {
+            background: linear-gradient(135deg, #76c7a0, #90ee90);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+        .sidebar button:hover {
+            background: linear-gradient(135deg, #90ee90, #76c7a0);
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.7);
+        }
+        .header {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+        #logoutBtn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        #logoutBtn:hover {
+            background-color: #e60000;
+            transform: scale(1.05);
+        }
+        .content {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <button id="callBtn">Call</button>
+        <button id="file">Upload</button>
+        <button id="todo">ToDO list</button>
+    </div>
+    <div class="header">
+        <button id="logoutBtn">Logout</button>
+    </div>
+    <div class="content">
+        <h2>Welcome to ProLearn</h2>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyANJBqPG_1R1P4Fv4pbnXmb8EBfzGZkKQA",
+            authDomain: "prolearn-5c636.firebaseapp.com",
+            projectId: "prolearn-5c636",
+            storageBucket: "prolearn-5c636.appspot.com",
+            messagingSenderId: "1043082930136",
+            appId: "1:1043082930136:web:9dd49f4baa9ab3625e34ad"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "/";
+            }
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", function() {
+            signOut(auth)
+                .then(() => {
+                    localStorage.removeItem("firebaseToken");
+                    window.location.href = "/";
+                })
+                .catch((error) => {
+                    alert("❌ Logout failed: " + error.message);
+                });
+        });   
+         document.getElementById("todo").addEventListener("click", function() {
+            signOut(auth)
+                .then(() => {
+                    localStorage.removeItem("firebaseToken");
+                    window.location.href = "/todolist";
+                })
+                .catch((error) => {
+                    alert("❌ Logout failed: " + error.message);
+                });
+        });
+
+
+         document.getElementById("callBtn").addEventListener("click", function() {
+            signOut(auth)
+                .then(() => {
+                    localStorage.removeItem("firebaseToken");
+                    window.location.href = "/index";
+                })
+                .catch((error) => {
+                    alert("❌ Click failed: " + error.message);
+                });
+        });
+
+         document.getElementById("file").addEventListener("click", function() {
+            signOut(auth)
+                .then(() => {
+                    localStorage.removeItem("firebaseToken");
+                    window.location.href = "/file";
+                })
+                .catch((error) => {
+                    alert("❌ Click failed: " + error.message);
+                });
+        });
+    </script>
+</body>
+</html>

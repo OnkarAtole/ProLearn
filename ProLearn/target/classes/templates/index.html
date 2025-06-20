@@ -1,0 +1,344 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Group Video Call</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #282c34;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #61dafb;
+        }
+
+        #joinContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: #333;
+            border-radius: 10px;
+            width: 300px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+        }
+
+        #roomInput {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #fff;
+        }
+
+        button {
+            padding: 12px 20px;
+            margin: 10px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+            background: linear-gradient(135deg, #76c7a0, #90ee90);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #5a9f80, #77d885);
+        }
+
+        #videoContainer {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: #333;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+        }
+
+        video {
+            width: 45%;
+            border-radius: 10px;
+            margin: 10px;
+            border: 2px solid #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        #remoteVideos {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .controls button {
+            width: 120px;
+            padding: 10px;
+            background: linear-gradient(135deg, #76c7a0, #90ee90);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        .controls button:hover {
+            background: linear-gradient(135deg, #5a9f80, #77d885);
+        }
+
+        #roomLink {
+            color: #61dafb;
+            font-weight: bold;
+        }
+
+        /* Custom CSS for the mic and camera buttons */
+        .mic-camera-btn {
+            width: 120px;
+            padding: 10px;
+            background: linear-gradient(135deg, #76c7a0, #90ee90);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+
+        .mic-camera-btn.active {
+            background: linear-gradient(135deg, #ff6347, #ff7f50); /* Red background when active */
+        }
+
+        .mic-camera-btn:hover {
+            background: linear-gradient(135deg, #5a9f80, #77d885);
+        }
+    </style>
+</head>
+<body>
+    <h2>WebRTC Group Video Call</h2>
+    <div id="joinContainer">
+        <button onclick="createRoom()">Create Call</button>
+        <input type="text" id="roomInput" placeholder="Enter call link">
+        <button onclick="joinRoom(document.getElementById('roomInput').value)">Join Call</button>
+    </div>
+    <div id="videoContainer">
+        <p>Share this link: <span id="roomLink"></span></p>
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div id="remoteVideos"></div>
+        <!-- Mic and Camera buttons with the new "mic-camera-btn" class -->
+        <button id="toggleMicBtn" class="mic-camera-btn" onclick="toggleMic()">Mic On</button>
+        <button id="toggleCameraBtn" class="mic-camera-btn" onclick="toggleCamera()">Camera On</button>
+        <button onclick="shareScreen()">Share Screen</button>
+        <button onclick="endCall()">End Call</button>
+    </div>
+       <script src="/config.js"></script>
+
+
+     <script>
+        const firebaseConfig = CONFIG.firebaseConfig1;
+        
+    </script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let roomId, localStream, peerConnection;
+        let remoteStreams = {}; 
+        let isSharingScreen = false;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            roomId = urlParams.get("room");
+            if (roomId) await joinRoom(roomId);
+        });
+
+        async function createRoom() {
+            roomId = Math.random().toString(36).substring(2, 7);
+            await setDoc(doc(db, "rooms", roomId), {});
+            document.getElementById("roomLink").innerText = `${window.location.href}?room=${roomId}`;
+            document.getElementById("joinContainer").style.display = "none";
+            document.getElementById("videoContainer").style.display = "block";
+            await startCall(true);
+        }
+        
+        async function joinRoom(id) {
+            roomId = id.split("room=")[1];
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnapshot = await getDoc(roomRef);
+            if (!roomSnapshot.exists()) return alert("Room does not exist!");
+            document.getElementById("joinContainer").style.display = "none";
+            document.getElementById("videoContainer").style.display = "block";
+            await startCall(false);
+        }
+
+        async function startCall(isCaller) {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById("localVideo").srcObject = localStream;
+            peerConnection = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.ontrack = event => addRemoteStream(event.streams[0]);
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) addDoc(collection(db, `rooms/${roomId}/candidates`), { candidate: event.candidate.toJSON() });
+            };
+
+            const roomRef = doc(db, "rooms", roomId);
+            if (isCaller) {
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                await updateDoc(roomRef, { offer });
+                onSnapshot(roomRef, async snapshot => {
+                    const data = snapshot.data();
+                    if (data.answer && !peerConnection.currentRemoteDescription) {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    }
+                });
+            } else {
+                onSnapshot(roomRef, async snapshot => {
+                    const data = snapshot.data();
+                    if (data.offer && !peerConnection.currentRemoteDescription) {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        await updateDoc(roomRef, { answer });
+                    }
+                });
+            }
+
+            onSnapshot(collection(db, `rooms/${roomId}/candidates`), snapshot => {
+                snapshot.docChanges().forEach(async change => {
+                    if (change.type === "added") {
+                        let candidate = new RTCIceCandidate(change.doc.data().candidate);
+                        await peerConnection.addIceCandidate(candidate);
+                    }
+                });
+            });
+        }
+
+        function addRemoteStream(stream) {
+            if (!remoteStreams[stream.id]) {
+                let video = document.createElement("video");
+                video.autoplay = true; video.playsInline = true;
+                video.srcObject = stream; video.id = `video-${stream.id}`;
+                document.getElementById("remoteVideos").appendChild(video);
+                remoteStreams[stream.id] = stream;
+            }
+        }
+
+        function removeRemoteStreams() {
+            document.getElementById("remoteVideos").innerHTML = "";
+            remoteStreams = {};
+        }
+
+        function toggleMic() {
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (!audioTrack) {
+        console.error("No audio track available.");
+        return;
+    }
+
+    audioTrack.enabled = !audioTrack.enabled;
+    const micBtn = document.getElementById("toggleMicBtn");
+    
+    if (audioTrack.enabled) {
+        micBtn.innerText = "Mic On";
+        micBtn.classList.remove("active");
+    } else {
+        micBtn.innerText = "Mic Off";
+        micBtn.classList.add("active");
+    }
+}
+
+        function toggleCamera() { 
+            let videoTrack = localStream.getVideoTracks()[0];
+            videoTrack.enabled = !videoTrack.enabled;
+            const cameraBtn = document.getElementById("toggleCameraBtn");
+            if (videoTrack.enabled) {
+                cameraBtn.innerText = "Camera On";
+                cameraBtn.classList.remove("active");
+            } else {
+                cameraBtn.innerText = "Camera Off";
+                cameraBtn.classList.add("active");
+            }
+        }
+
+        async function shareScreen() {
+            if (isSharingScreen) {
+                const sender = peerConnection.getSenders().find(s => s.track.kind === "video");
+                sender.replaceTrack(localStream.getVideoTracks()[0]);
+                isSharingScreen = false;
+            } else {
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const sender = peerConnection.getSenders().find(s => s.track.kind === "video");
+                sender.replaceTrack(screenStream.getTracks()[0]);
+                isSharingScreen = true;
+
+                screenStream.getTracks()[0].onended = () => {
+                    sender.replaceTrack(localStream.getVideoTracks()[0]);
+                    isSharingScreen = false;
+                };
+            }
+        }
+
+        async function endCall() {
+            // Stop local stream
+            localStream.getTracks().forEach(track => track.stop());
+
+            // Close Peer Connection
+            if (peerConnection) {
+                peerConnection.close();
+            }
+
+            // Remove remote streams
+            removeRemoteStreams();
+
+            // Delete room from Firebase
+            if (roomId) {
+                await deleteDoc(doc(db, "rooms", roomId));
+            }
+
+            // Hide UI & show join container
+            document.getElementById("videoContainer").style.display = "none";
+            document.getElementById("joinContainer").style.display = "block";
+
+            // Clear the room link text
+            document.getElementById("roomLink").innerText = "";
+        }
+
+        window.createRoom = createRoom;
+        window.joinRoom = joinRoom;
+        window.toggleMic = toggleMic;
+        window.toggleCamera = toggleCamera;
+        window.shareScreen = shareScreen;
+        window.endCall = endCall;
+    </script>
+</body>
+</html>
+
+

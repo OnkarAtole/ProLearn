@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #000; /* Black background */
+            color: white;
+        }
+
+        .container {
+            width: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-align: center;
+            outline: none;
+            font-size: 16px;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* ✅ Updated Button Styling */
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            background: linear-gradient(135deg, #76c7a0, #90ee90); /* Your requested gradient */
+            color: white;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .task {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-top: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .task span {
+            flex-grow: 1;
+            text-align: left;
+            padding: 0 10px;
+        }
+
+        /* ✅ Updated Task Buttons */
+        .task button {
+            width: auto;
+            padding: 6px 12px;
+            margin-left: 8px;
+            font-size: 14px;
+            border-radius: 5px;
+            background: linear-gradient(135deg, #76c7a0, #90ee90); /* Match main button gradient */
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .task button:hover {
+            opacity: 0.8;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>📋 Your To-Do List</h2>
+        <input type="text" id="taskInput" placeholder="Enter a new task...">
+        <button id="addTaskBtn">Add Task</button>
+        <div id="taskList"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/9.2.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyANJBqPG_1R1P4Fv4pbnXmb8EBfzGZkKQA",
+            authDomain: "prolearn-5c636.firebaseapp.com",
+            projectId: "prolearn-5c636",
+            storageBucket: "prolearn-5c636.appspot.com",
+            messagingSenderId: "1043082930136",
+            appId: "1:1043082930136:web:9dd49f4baa9ab3625e34ad"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userUID = localStorage.getItem("userUID");
+        if (!userUID) window.location.href = "/";
+
+        const taskInput = document.getElementById("taskInput");
+        const addTaskBtn = document.getElementById("addTaskBtn");
+        const taskList = document.getElementById("taskList");
+
+        // ✅ Add a new task
+        async function addTask() {
+            const taskText = taskInput.value.trim();
+            if (taskText === "") return alert("Task cannot be empty!");
+
+            await addDoc(collection(db, "users", userUID, "tasks"), {
+                text: taskText,
+                completed: false
+            });
+
+            taskInput.value = "";
+            loadTasks();
+        }
+
+        // ✅ Load tasks from Firestore
+        async function loadTasks() {
+            taskList.innerHTML = "";
+            const querySnapshot = await getDocs(collection(db, "users", userUID, "tasks"));
+
+            querySnapshot.forEach((taskDoc) => {
+                const taskData = taskDoc.data();
+                const taskId = taskDoc.id;
+
+                const taskElement = document.createElement("div");
+                taskElement.classList.add("task");
+                if (taskData.completed) taskElement.classList.add("completed");
+
+                taskElement.innerHTML = `
+                    <span>${taskData.text}</span>
+                    <button onclick="toggleTask('${taskId}', ${taskData.completed})">
+                        ${taskData.completed ? "Undo" : "Complete"}
+                    </button>
+                    <button onclick="deleteTask('${taskId}')">❌</button>
+                `;
+
+                taskList.appendChild(taskElement);
+            });
+        }
+
+        // ✅ Mark task as completed or undo
+        async function toggleTask(taskId, isCompleted) {
+            await updateDoc(doc(db, "users", userUID, "tasks", taskId), {
+                completed: !isCompleted
+            });
+            loadTasks();
+        }
+
+        // ✅ Delete a task
+        async function deleteTask(taskId) {
+            await deleteDoc(doc(db, "users", userUID, "tasks", taskId));
+            loadTasks();
+        }
+
+        // 🔥 Fix: Make functions globally accessible
+        window.toggleTask = toggleTask;
+        window.deleteTask = deleteTask;
+
+        addTaskBtn.addEventListener("click", addTask);
+        loadTasks();
+    </script>
+
+</body>
+</html>

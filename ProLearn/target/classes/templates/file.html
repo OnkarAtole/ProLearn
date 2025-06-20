@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive File Manager</title>
+    <style>/* General Page Styling */
+/* General Page Styling */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #1e1e2f;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+}
+
+.container {
+    width: 90%;
+    max-width: 800px;
+    background: #2a2a3a;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    margin-top: 20px;
+    text-align: center;
+}
+
+h1, h2 {
+    color: #ffcc00;
+    text-transform: uppercase;
+    margin-bottom: 15px; 
+    color: #61dafb;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 15px 0;
+}
+
+input[type="text"], input[type="file"] {
+    width: 90%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 2px solid #ffcc00;
+    background: #3a3a4a;
+    color: #ffffff;
+    border-radius: 6px;
+    font-size: 16px;
+    text-align: center;
+}
+
+button {
+    background: linear-gradient(135deg, #76c7a0, #90ee90);
+    color: white;
+    padding: 14px 22px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.3s;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #5a9f80, #77d885);
+    transform: scale(1.08);
+}
+
+.list-container {
+    width: 100%;
+    margin-top: 20px;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    width: 100%;
+    text-align: left;
+}
+
+li {
+    background-color: #33334d;
+    margin: 8px 0;
+    padding: 12px;
+    border-radius: 6px;
+    transition: 0.3s;
+    font-size: 16px;
+}
+
+li:hover {
+    background-color: #444466;
+    transform: scale(1.05);
+}
+
+a {
+    color: #ffcc00;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+a:hover {
+    color: #ff9900;
+    text-decoration: underline;
+}
+
+    </style>
+</head>
+
+<body>
+    <h1>Google Drive File Manager</h1>
+
+    <h2>Create Folder</h2>
+    <label for="folderName">Folder Name:</label>
+    <input type="text" id="folderName" placeholder="Enter folder name">
+    <button onclick="createFolder()">Create Folder</button>
+    <p id="folderIdDisplay"></p>
+
+    <h2>Folder List</h2>
+    <button onclick="listFolders()">Show Folders</button>
+    <ul id="folderList"></ul>
+
+    <h2>Upload File</h2>
+    <label for="folderId">Folder ID:</label>
+    <input type="text" id="folderId" placeholder="Enter Google Drive Folder ID"><br><br>
+
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload File</button>
+
+    <h2>Files in Folder</h2>
+    <button onclick="listFiles()">Show Files</button>
+    <ul id="fileList"></ul>
+    <script src="/config.js"></script>
+
+
+<script>
+  const scriptURL = CONFIG.scriptURL;
+  console.log("Loaded scriptURL:", scriptURL); // Should print correct URL
+</script>
+    
+    <script>
+        
+        // const scriptURL1 = "https://script.google.com/macros/s/AKfycbxcJV2p9XIielDAGe7ra8J_AzzrFYFezHnqy8gwN1SlKlxAht3p9lSsB8StbgqIUaQP/exec"; 
+        async function createFolder() {
+            const folderName = document.getElementById("folderName").value;
+            if (!folderName) {
+                alert("Please enter a folder name!");
+                return;
+            }
+
+            const response = await fetch(`${scriptURL}?action=createFolder&folderName=${folderName}`);
+            const data = await response.json();
+            if (data.folderId) {
+                document.getElementById("folderIdDisplay").innerText = `Folder Created: ${data.folderName} (ID: ${data.folderId})`;
+                document.getElementById("folderId").value = data.folderId;
+                alert(`Folder Created: ${data.folderName} (ID: ${data.folderId})`);
+                listFolders();
+            } else {
+                alert("Error: " + data.error);
+            }
+        }
+
+        async function listFolders() {
+            const response = await fetch(`${scriptURL}?action=listFolders`);
+            const folders = await response.json();
+            const folderList = document.getElementById("folderList");
+            folderList.innerHTML = "<h3>Folders:</h3>";
+
+            folders.forEach(folder => {
+                const li = document.createElement("li");
+                li.innerHTML = `<strong>${folder.name}</strong> (ID: <span style="color:blue;">${folder.id}</span>)`;
+                li.onclick = () => document.getElementById("folderId").value = folder.id;
+                folderList.appendChild(li);
+            });
+        }
+
+        async function uploadFile() {
+            const folderId = document.getElementById("folderId").value;
+            const fileInput = document.getElementById("fileInput");
+            const file = fileInput.files[0];
+
+            if (!folderId || !file) {
+                alert("Please enter a valid Folder ID and select a file!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = async function() {
+                const fileData = reader.result.split(',')[1]; // Removes Base64 prefix
+
+                const response = await fetch(scriptURL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `action=uploadFile&folderId=${folderId}&fileName=${encodeURIComponent(file.name)}&mimeType=${encodeURIComponent(file.type)}&fileData=${encodeURIComponent(fileData)}`
+                });
+
+                const data = await response.json();
+                alert(data.url ? `File Uploaded Successfully: ${data.name}` : "Error: " + data.error);
+                listFiles();
+            };
+            reader.readAsDataURL(file); // Ensure correct file encoding
+        }
+
+
+        async function listFiles() {
+            const folderId = document.getElementById("folderId").value;
+            if (!folderId) {
+                alert("Please enter a Folder ID!");
+                return;
+            }
+
+            const response = await fetch(`${scriptURL}?action=listFiles&folderId=${folderId}`);
+            const files = await response.json();
+            const fileList = document.getElementById("fileList");
+            fileList.innerHTML = "<h3>Files:</h3>";
+
+            files.forEach(file => {
+                const li = document.createElement("li");
+                li.innerHTML = `<a href="${file.url}" target="_blank">${file.name}</a> | 
+                                <a href="${file.downloadUrl}" download>Download</a>`;
+                fileList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
+  
+
+ 
